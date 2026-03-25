@@ -47,59 +47,71 @@
     let audioChunks = [];
 
     btn.onclick = async () => {
+        // Reset do visual do botão caso estivesse no modo "Continuar"
+        btn.innerHTML = "🎤";
+        btn.style.background = ""; 
+
         if (btn.classList.contains('active')) {
-            // PARAR GRAVAÇÃO
             mediaRecorder.stop();
             btn.classList.remove('active');
-            status.innerText = "Enviando áudio...";
+            status.innerText = "A Cris está pensando...";
         } else {
-            // INICIAR GRAVAÇÃO
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
-            audioChunks = [];
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
 
-            mediaRecorder.ondataavailable = (event) => audioChunks.push(event.data);
-            
-            mediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/ogg' });
-                const reader = new FileReader();
-                reader.readAsDataURL(audioBlob);
-                reader.onloadend = async () => {
-                    const base64Audio = reader.result.split(',')[1];
-                    enviarParaAWS(base64Audio);
+                mediaRecorder.ondataavailable = (event) => audioChunks.push(event.data);
+                
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/ogg' });
+                    const reader = new FileReader();
+                    reader.readAsDataURL(audioBlob);
+                    reader.onloadend = async () => {
+                        const base64Audio = reader.result.split(',')[1];
+                        enviarParaAWS(base64Audio);
+                    };
                 };
-            };
 
-            mediaRecorder.start();
-            btn.classList.add('active');
-            status.innerText = "Gravando... Clique de novo para parar.";
+                mediaRecorder.start();
+                btn.classList.add('active');
+                status.innerText = "Ouvindo... Clique para parar.";
+            } catch (err) {
+                status.innerText = "Erro ao acessar microfone.";
+                console.error(err);
+            }
         }
     };
 
     async function enviarParaAWS(base64Audio) {
-        status.innerText = "A Cris está processando...";
         try {
             const response = await fetch(API_ENDPOINT, {
                 method: 'POST',
-                // O segredo está no JSON em maiúsculo aqui embaixo:
-                body: JSON.stringify({ audio_base64: base64Audio }) 
+                body: JSON.stringify({ audio_base64: base64Audio })
             });
             const data = await response.json();
 
             userText.innerText = data.ouvi || "---";
             crisText.innerText = data.cris_respondeu || "---";
             
-     if (data.audio_64) {
+            if (data.audio_64) {
                 const audio = new Audio("data:audio/mp3;base64," + data.audio_64);
-                audio.play();
+                status.innerText = "Cris respondendo...";
                 
-                // Quando a Cris terminar de falar, o botão reseta para "Continuar"
+                audio.play();
+
+                // EVENTO: Quando o áudio termina
                 audio.onended = () => {
-                    status.innerText = "Deseja perguntar algo mais?";
-                    btn.innerHTML = "➕"; // Ícone de adicionar ou continuar
-                    btn.style.background = "#28a745"; // Cor verde de sucesso
+                    status.innerText = "Atendimento concluído! Algo mais?";
+                    btn.innerHTML = "➕"; 
+                    btn.style.background = "#28a745"; // Verde Sucesso
                 };
             }
+        } catch (err) {
+            status.innerText = "Erro na conexão.";
+            console.error(err);
+        }
+    }
 </script>
 </body>
 </html>
