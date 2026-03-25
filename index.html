@@ -37,8 +37,8 @@
 </div>
 
 <script>
-    // ⚠️ ATENÇÃO: COLOQUE SUA URL DO API GATEWAY AQUI DEPOIS
-    const API_ENDPOINT = "https://x0ht8akouf.execute-api.sa-east-1.amazonaws.com";
+    // URL da sua API Gateway (Verificada)
+    const API_ENDPOINT = "https://x0ht8akouf.execute-api.sa-east-1.amazonaws.com/";
 
     const btn = document.getElementById('btnAction');
     const status = document.getElementById('status');
@@ -46,34 +46,56 @@
     const crisText = document.getElementById('crisText');
 
     btn.onclick = async () => {
-        // Feedback visual de carregamento
+        // Inicia animação e limpa textos anteriores
         btn.classList.add('active');
         status.innerText = "A Cris está processando...";
         userText.innerText = "---";
         crisText.innerText = "---";
 
         try {
-            // Chama a API da AWS (Lambda via API Gateway)
+            // Chamada para a AWS
             const response = await fetch(API_ENDPOINT);
-            
-            if (!response.ok) throw new Error("Erro na API");
+            if (!response.ok) throw new Error("Erro na comunicação com a AWS");
             
             const data = await response.json();
 
-            // 1. Atualiza os textos na interface
-            userText.innerText = data.ouvi;
-            crisText.innerText = data.cris_respondeu;
-            status.innerText = "Atendimento concluído!";
+            // 1. Toca o áudio da PERGUNTA (vinda do S3)
+            if (data.audio_pergunta_64) {
+                status.innerText = "Ouvindo a pergunta...";
+                const audioPergunta = new Audio("data:audio/ogg;base64," + data.audio_pergunta_64);
+                
+                // Usamos uma Promise para garantir que a Cris só fale DEPOIS da pergunta acabar
+                await new Promise((resolve) => {
+                    audioPergunta.onended = resolve;
+                    audioPergunta.play().catch(e => {
+                        console.error("Erro ao tocar pergunta:", e);
+                        resolve(); // Segue o fluxo mesmo se der erro no áudio
+                    });
+                });
+            }
 
-            // 2. Toca o áudio recebido em Base64 imediatamente
-            const audioCris = new Audio("data:audio/mp3;base64," + data.audio_64);
-            audioCris.play();
+            // Pequena pausa dramática para naturalidade
+            await new Promise(r => setTimeout(r, 800));
+
+            // 2. Atualiza os textos na tela
+            userText.innerText = data.ouvi || "Não foi possível transcrever";
+            crisText.innerText = data.cris_respondeu || "Sem resposta da assistente";
+            status.innerText = "Cris respondendo...";
+
+            // 3. Toca o áudio da RESPOSTA (vinda da Polly)
+            if (data.audio_64) {
+                const audioCris = new Audio("data:audio/mp3;base64," + data.audio_64);
+                audioCris.play();
+            }
+
+            status.innerText = "Atendimento concluído!";
 
         } catch (err) {
             status.innerText = "Erro ao falar com a Cris.";
             console.error("Erro detalhado:", err);
+            alert("Houve um problema na conexão. Verifique o console (F12).");
         } finally {
-            // Remove a animação do botão
+            // Para a animação do botão
             btn.classList.remove('active');
         }
     };
