@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cris IA - Painel CEABS</title>
     <style>
-        :root { --primary: #004a99; --secondary: #00a1e4; }
+        :root { --primary: #004a99; --secondary: #00a1e4; --success: #28a745; }
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .container { background: white; width: 90%; max-width: 450px; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; }
         .logo { font-weight: bold; color: var(--primary); font-size: 26px; margin-bottom: 25px; }
         .btn-mic { background: var(--primary); color: white; border: none; width: 90px; height: 90px; border-radius: 50%; font-size: 35px; cursor: pointer; transition: 0.3s; display: inline-flex; justify-content: center; align-items: center; margin: 0 auto; outline: none; }
-        .btn-mic:hover { transform: scale(1.05); background: var(--secondary); }
+        .btn-mic:hover { transform: scale(1.05); }
         .btn-mic.active { animation: pulse 1.5s infinite; background: #ff4b4b; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,75,75,0.7); } 70% { box-shadow: 0 0 0 20px rgba(255,75,75,0); } 100% { box-shadow: 0 0 0 0 rgba(255,75,75,0); } }
         .chat-box { text-align: left; margin-top: 30px; }
@@ -23,14 +23,12 @@
 
 <div class="container">
     <div class="logo">CEABS <span style="color:var(--secondary)">CRIS IA</span></div>
-    
     <button class="btn-mic" id="btnAction">🎤</button>
     <div id="status">Clique para iniciar</div>
 
     <div class="chat-box">
         <div class="label">Você disse:</div>
         <div class="text-output" id="userText">---</div>
-
         <div class="label">Cris respondeu:</div>
         <div class="text-output" id="crisText">---</div>
     </div>
@@ -47,24 +45,21 @@
     let audioChunks = [];
 
     btn.onclick = async () => {
-        // Reseta visual se estiver no modo "Continuar"
+        // Reset visual do botão ao clicar novamente
         btn.innerHTML = "🎤";
         btn.style.background = "";
 
         if (btn.classList.contains('active')) {
             mediaRecorder.stop();
             btn.classList.remove('active');
-            status.innerText = "A Cris está preparando a resposta...";
+            status.innerText = "Processando sua voz...";
         } else {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 mediaRecorder = new MediaRecorder(stream);
                 audioChunks = [];
 
-                mediaRecorder.ondataavailable = (event) => {
-                    audioChunks.push(event.data);
-                };
-
+                mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
                 mediaRecorder.onstop = async () => {
                     const audioBlob = new Blob(audioChunks, { type: 'audio/ogg' });
                     const reader = new FileReader();
@@ -79,19 +74,22 @@
                 btn.classList.add('active');
                 status.innerText = "Ouvindo... Clique para parar.";
             } catch (err) {
-                status.innerText = "Erro ao acessar microfone.";
+                status.innerText = "Erro no microfone.";
                 console.error(err);
             }
         }
     };
 
-    async function enviarParaAWS(base64Audio) {
+    async function enviarParaAWS(base64) {
+        status.innerText = "A Cris está pensando...";
         try {
             const response = await fetch(API_ENDPOINT, {
                 method: 'POST',
-                body: JSON.stringify({ audio_base64: base64Audio })
+                body: JSON.stringify({ audio_base64: base64 })
             });
             const data = await response.json();
+
+            if (data.erro) throw new Error(data.erro);
 
             userText.innerText = data.ouvi || "---";
             crisText.innerText = data.cris_respondeu || "---";
@@ -102,17 +100,16 @@
                 audio.play();
 
                 audio.onended = () => {
-                    status.innerText = "Atendimento concluído! Algo mais?";
+                    status.innerText = "Atendimento concluído!";
                     btn.innerHTML = "➕";
-                    btn.style.background = "#28a745"; 
+                    btn.style.background = "#28a745";
                 };
             }
         } catch (err) {
-            status.innerText = "Erro na conexão.";
+            status.innerText = "Erro na comunicação.";
             console.error(err);
         }
     }
 </script>
-
 </body>
 </html>
