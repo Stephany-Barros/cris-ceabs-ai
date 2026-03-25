@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cris IA - Painel CEABS</title>
+    <style>
+        :root { --primary: #004a99; --secondary: #00a1e4; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .container { background: white; width: 90%; max-width: 450px; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; }
+        .logo { font-weight: bold; color: var(--primary); font-size: 26px; margin-bottom: 25px; }
+        .btn-mic { background: var(--primary); color: white; border: none; width: 90px; height: 90px; border-radius: 50%; font-size: 35px; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 15px rgba(0,74,153,0.3); outline: none; }
+        .btn-mic:hover { transform: scale(1.05); background: var(--secondary); }
+        .btn-mic.active { animation: pulse 1.5s infinite; background: #ff4b4b; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,75,75,0.7); } 70% { box-shadow: 0 0 0 20px rgba(255,75,75,0); } 100% { box-shadow: 0 0 0 0 rgba(255,75,75,0); } }
+        .chat-box { text-align: left; margin-top: 30px; }
+        .label { font-size: 11px; color: #999; text-transform: uppercase; font-weight: bold; margin-bottom: 5px; letter-spacing: 1px; }
+        .text-output { background: #f8f9fa; padding: 15px; border-radius: 10px; border-left: 4px solid var(--primary); margin-bottom: 20px; font-size: 14px; color: #333; min-height: 20px; line-height: 1.4; }
+        #status { font-size: 14px; color: var(--secondary); font-weight: 500; margin-top: 20px; height: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="logo">CEABS <span style="color: var(--secondary);">CRIS IA</span></div>
+    
+    <button id="btnAction" class="btn-mic">🎤</button>
+    <div id="status">Clique para iniciar o atendimento</div>
+
+    <div class="chat-box">
+        <div class="label">Você disse:</div>
+        <div id="userText" class="text-output">...</div>
+
+        <div class="label">Cris respondeu:</div>
+        <div id="crisText" class="text-output">...</div>
+    </div>
+</div>
+
+<script>
+    // ⚠️ ATENÇÃO: COLOQUE SUA URL DO API GATEWAY AQUI DEPOIS
+    const API_ENDPOINT = "SUA_URL_DO_API_GATEWAY_AQUI"; 
+
+    const btn = document.getElementById('btnAction');
+    const status = document.getElementById('status');
+    const userText = document.getElementById('userText');
+    const crisText = document.getElementById('crisText');
+
+    btn.onclick = async () => {
+        // Feedback visual de carregamento
+        btn.classList.add('active');
+        status.innerText = "A Cris está processando...";
+        userText.innerText = "---";
+        crisText.innerText = "---";
+
+        try {
+            // Chama a API da AWS (Lambda via API Gateway)
+            const response = await fetch(API_ENDPOINT);
+            
+            if (!response.ok) throw new Error("Erro na API");
+            
+            const data = await response.json();
+
+            // 1. Atualiza os textos na interface
+            userText.innerText = data.ouvi;
+            crisText.innerText = data.cris_respondeu;
+            status.innerText = "Atendimento concluído!";
+
+            // 2. Toca o áudio recebido em Base64 imediatamente
+            const audioCris = new Audio("data:audio/mp3;base64," + data.audio_64);
+            audioCris.play();
+
+        } catch (err) {
+            status.innerText = "Erro ao falar com a Cris.";
+            console.error("Erro detalhado:", err);
+        } finally {
+            // Remove a animação do botão
+            btn.classList.remove('active');
+        }
+    };
+</script>
+
+</body>
+</html>
