@@ -1,28 +1,28 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cris IA - Painel CEABS</title>
     <style>
-        :root { --primario: #004a99; --secundario: #00a1e4; }
+        :root { --primary: #004a99; --secondary: #00a1e4; }
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .container { background: white; width: 90%; max-width: 450px; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; }
-        .logo { font-weight: bold; color: var(--primario); font-size: 26px; margin-bottom: 25px; }
-        .btn-mic { background: var(--primario); color: white; border: none; width: 90px; height: 90px; border-radius: 50%; font-size: 35px; cursor: pointer; transition: 0.3s; display: inline-flex; justify-content: center; align-items: center; }
-        .btn-mic:hover { transform: scale(1.05); background: var(--secundario); }
+        .logo { font-weight: bold; color: var(--primary); font-size: 26px; margin-bottom: 25px; }
+        .btn-mic { background: var(--primary); color: white; border: none; width: 90px; height: 90px; border-radius: 50%; font-size: 35px; cursor: pointer; transition: 0.3s; display: inline-flex; justify-content: center; align-items: center; margin: 0 auto; }
+        .btn-mic:hover { transform: scale(1.05); background: var(--secondary); }
         .btn-mic.active { animation: pulse 1.5s infinite; background: #ff4b4b; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,75,75,0.7); } 70% { box-shadow: 0 0 0 20px rgba(255,75,75,0); } 100% { box-shadow: 0 0 0 0 rgba(255,75,75,0); } }
         .chat-box { text-align: left; margin-top: 30px; }
         .label { font-size: 11px; color: #999; text-transform: uppercase; font-weight: bold; margin-bottom: 5px; letter-spacing: 1px; }
-        .text-output { background: #f8f9fa; padding: 15px; border-radius: 10px; border-left: 4px solid var(--primario); margin-bottom: 20px; font-size: 14px; color: #333; min-height: 20px; }
-        #status { font-size: 14px; color: var(--secundario); font-weight: 500; margin-top: 20px; height: 20px; }
+        .text-output { background: #f8f9fa; padding: 15px; border-radius: 10px; border-left: 4px solid var(--primary); margin-bottom: 20px; font-size: 14px; color: #333; min-height: 20px; }
+        #status { font-size: 14px; color: var(--secondary); font-weight: 500; margin-top: 20px; height: 20px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="logo">CEABS <span style="color:var(--secundario)">CRIS IA</span></div>
+    <div class="logo">CEABS <span style="color:var(--secondary)">CRIS IA</span></div>
     
     <button class="btn-mic" id="btnAction">🎤</button>
     <div id="status">Clique para iniciar</div>
@@ -56,7 +56,6 @@
             
             const data = await response.json();
 
-            // 1. Tocar Pergunta
             if (data.audio_pergunta_64) {
                 status.innerText = "Ouvindo pergunta...";
                 const audioP = new Audio("data:audio/ogg;base64," + data.audio_pergunta_64);
@@ -65,12 +64,10 @@
 
             await new Promise(r => setTimeout(r, 500));
 
-            // 2. Atualizar Textos
             userText.innerText = data.ouvi || "---";
             crisText.innerText = data.cris_respondeu || "---";
             status.innerText = "Cris respondendo...";
 
-            // 3. Tocar Resposta
             if (data.audio_64) {
                 const audioC = new Audio("data:audio/mp3;base64," + data.audio_64);
                 audioC.play();
