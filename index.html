@@ -38,50 +38,66 @@
 
 <script>
     const API_ENDPOINT = "https://x0ht8akouf.execute-api.sa-east-1.amazonaws.com/";
-
     const btn = document.getElementById('btnAction');
     const status = document.getElementById('status');
     const userText = document.getElementById('userText');
     const crisText = document.getElementById('crisText');
 
+    let mediaRecorder;
+    let audioChunks = [];
+
     btn.onclick = async () => {
-        btn.classList.add('active');
-        status.innerText = "A Cris está processando...";
-        userText.innerText = "---";
-        crisText.innerText = "---";
+        if (btn.classList.contains('active')) {
+            // PARAR GRAVAÇÃO
+            mediaRecorder.stop();
+            btn.classList.remove('active');
+            status.innerText = "Enviando áudio...";
+        } else {
+            // INICIAR GRAVAÇÃO
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
 
-        try {
-            const response = await fetch(API_ENDPOINT);
-            if (!response.ok) throw new Error("Erro na rede");
+            mediaRecorder.ondataavailable = (event) => audioChunks.push(event.data);
             
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/ogg' });
+                const reader = new FileReader();
+                reader.readAsDataURL(audioBlob);
+                reader.onloadend = async () => {
+                    const base64Audio = reader.result.split(',')[1];
+                    enviarParaAWS(base64Audio);
+                };
+            };
+
+            mediaRecorder.start();
+            btn.classList.add('active');
+            status.innerText = "Gravando... Clique de novo para parar.";
+        }
+    };
+
+    async function enviarParaAWS(base64Audio) {
+        status.innerText = "A Cris está processando...";
+        try {
+            const response = await fetch(API_ENDPOINT, {
+                method: 'POST',
+                body: json.stringify({ audio_base64: base64Audio })
+            });
             const data = await response.json();
-
-            if (data.audio_pergunta_64) {
-                status.innerText = "Ouvindo pergunta...";
-                const audioP = new Audio("data:audio/ogg;base64," + data.audio_pergunta_64);
-                await new Promise(res => { audioP.onended = res; audioP.play(); });
-            }
-
-            await new Promise(r => setTimeout(r, 500));
 
             userText.innerText = data.ouvi || "---";
             crisText.innerText = data.cris_respondeu || "---";
-            status.innerText = "Cris respondendo...";
-
+            
             if (data.audio_64) {
-                const audioC = new Audio("data:audio/mp3;base64," + data.audio_64);
-                audioC.play();
+                const audio = new Audio("data:audio/mp3;base64," + data.audio_64);
+                audio.play();
             }
-
             status.innerText = "Atendimento concluído!";
         } catch (err) {
-            status.innerText = "Erro ao falar com a Cris.";
+            status.innerText = "Erro na conexão.";
             console.error(err);
-        } finally {
-            btn.classList.remove('active');
         }
-    };
+    }
 </script>
-
 </body>
 </html>
