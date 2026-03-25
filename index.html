@@ -9,7 +9,7 @@
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .container { background: white; width: 90%; max-width: 450px; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; }
         .logo { font-weight: bold; color: var(--primary); font-size: 26px; margin-bottom: 25px; }
-        .btn-mic { background: var(--primary); color: white; border: none; width: 90px; height: 90px; border-radius: 50%; font-size: 35px; cursor: pointer; transition: 0.3s; display: inline-flex; justify-content: center; align-items: center; margin: 0 auto; }
+        .btn-mic { background: var(--primary); color: white; border: none; width: 90px; height: 90px; border-radius: 50%; font-size: 35px; cursor: pointer; transition: 0.3s; display: inline-flex; justify-content: center; align-items: center; margin: 0 auto; outline: none; }
         .btn-mic:hover { transform: scale(1.05); background: var(--secondary); }
         .btn-mic.active { animation: pulse 1.5s infinite; background: #ff4b4b; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,75,75,0.7); } 70% { box-shadow: 0 0 0 20px rgba(255,75,75,0); } 100% { box-shadow: 0 0 0 0 rgba(255,75,75,0); } }
@@ -47,29 +47,31 @@
     let audioChunks = [];
 
     btn.onclick = async () => {
-        // Reset do visual do botão caso estivesse no modo "Continuar"
+        // Reseta visual se estiver no modo "Continuar"
         btn.innerHTML = "🎤";
-        btn.style.background = ""; 
+        btn.style.background = "";
 
         if (btn.classList.contains('active')) {
             mediaRecorder.stop();
             btn.classList.remove('active');
-            status.innerText = "A Cris está pensando...";
+            status.innerText = "A Cris está preparando a resposta...";
         } else {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 mediaRecorder = new MediaRecorder(stream);
                 audioChunks = [];
 
-                mediaRecorder.ondataavailable = (event) => audioChunks.push(event.data);
-                
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
                 mediaRecorder.onstop = async () => {
                     const audioBlob = new Blob(audioChunks, { type: 'audio/ogg' });
                     const reader = new FileReader();
                     reader.readAsDataURL(audioBlob);
                     reader.onloadend = async () => {
                         const base64Audio = reader.result.split(',')[1];
-                        enviarParaAWS(base64Audio);
+                        await enviarParaAWS(base64Audio);
                     };
                 };
 
@@ -97,14 +99,12 @@
             if (data.audio_64) {
                 const audio = new Audio("data:audio/mp3;base64," + data.audio_64);
                 status.innerText = "Cris respondendo...";
-                
                 audio.play();
 
-                // EVENTO: Quando o áudio termina
                 audio.onended = () => {
                     status.innerText = "Atendimento concluído! Algo mais?";
-                    btn.innerHTML = "➕"; 
-                    btn.style.background = "#28a745"; // Verde Sucesso
+                    btn.innerHTML = "➕";
+                    btn.style.background = "#28a745"; 
                 };
             }
         } catch (err) {
@@ -113,5 +113,6 @@
         }
     }
 </script>
+
 </body>
 </html>
