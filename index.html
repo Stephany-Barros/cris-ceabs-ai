@@ -81,7 +81,8 @@
         try {
             const response = await fetch(API_ENDPOINT, {
                 method: 'POST',
-                body: json.stringify({ audio_base64: base64Audio })
+                // O segredo está no JSON em maiúsculo aqui embaixo:
+                body: JSON.stringify({ audio_base64: base64Audio }) 
             });
             const data = await response.json();
 
