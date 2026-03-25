@@ -89,16 +89,17 @@
             userText.innerText = data.ouvi || "---";
             crisText.innerText = data.cris_respondeu || "---";
             
-            if (data.audio_64) {
+     if (data.audio_64) {
                 const audio = new Audio("data:audio/mp3;base64," + data.audio_64);
                 audio.play();
+                
+                // Quando a Cris terminar de falar, o botão reseta para "Continuar"
+                audio.onended = () => {
+                    status.innerText = "Deseja perguntar algo mais?";
+                    btn.innerHTML = "➕"; // Ícone de adicionar ou continuar
+                    btn.style.background = "#28a745"; // Cor verde de sucesso
+                };
             }
-            status.innerText = "Atendimento concluído!";
-        } catch (err) {
-            status.innerText = "Erro na conexão.";
-            console.error(err);
-        }
-    }
 </script>
 </body>
 </html>
