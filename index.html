@@ -5,34 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cris IA - Painel CEABS</title>
     <style>
-        :root{--primario: #004a99;--secundario: #00a1e4; }
-        body{font-family: 'Segoe UI',Tahoma,sans-serif;fundo: #f0f2f5;mostrar:flexível;justificar-conteúdo:centro;alinhar-itens:centro;altura:100vh;margem:0;}
-        .recipiente{fundo:branco;largura: 90%;largura-máxima: 450px;acolchoamento: 40px;raio-da-borda: 20px;sombra de caixa: 0 10px 30px rgba(0,0,0,0,1);alinhamento-de-texto:centro;}
-        .logotipo{peso da fonte:audacioso;cor: var(--primario);tamanho da fonte: 26px;margem inferior: 25px; }
-        .btn-mic{fundo: var(--primario);cor:branco;fronteira:nenhum;largura: 90px;altura: 90px;raio-da-borda: 50%;tamanho da fonte: 35px;cursor:ponteiro;transição:0.3s;}
-        .btn-mic:pairar{transformar: escala(1.05);fundo: var(--secundario); }
-        .btn-mic.ativo{animação:pulso1,5sinfinito;fundo: #ff4b4b; }
-        @keyframespulso {0%{sombra de caixa: 0 0 0 0 rgba(255,75,75,0,7); }70%{sombra de caixa: 0 0 0 20px rgba(255,75,75,0); }100%{sombra de caixa: 0 0 0 0 rgba(255,75,75,0); }}
-        .caixa de bate-papo{alinhamento de texto:esquerda;margem superior: 30px; }
-        .rótulo{tamanho da fonte: 11px;cor: #999;transformação de texto:maiúsculas;peso da fonte:audacioso;margem inferior: 5px;espaçamento entre letras: 1px; }
-        .saída de texto{fundo: #f8f9fa;acolchoamento: 15px;raio-da-borda: 10px;fronteira esquerda: 4pxsólido var(--primario);margem inferior: 20px;tamanho da fonte: 14px;cor: #333;mín-altura: 20px;}
-        #status{tamanho da fonte: 14px;cor: var(--secundario);peso da fonte: 500;margem superior: 20px;altura: 20px; }
+        :root { --primario: #004a99; --secundario: #00a1e4; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .container { background: white; width: 90%; max-width: 450px; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; }
+        .logo { font-weight: bold; color: var(--primario); font-size: 26px; margin-bottom: 25px; }
+        .btn-mic { background: var(--primario); color: white; border: none; width: 90px; height: 90px; border-radius: 50%; font-size: 35px; cursor: pointer; transition: 0.3s; display: inline-flex; justify-content: center; align-items: center; }
+        .btn-mic:hover { transform: scale(1.05); background: var(--secundario); }
+        .btn-mic.active { animation: pulse 1.5s infinite; background: #ff4b4b; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,75,75,0.7); } 70% { box-shadow: 0 0 0 20px rgba(255,75,75,0); } 100% { box-shadow: 0 0 0 0 rgba(255,75,75,0); } }
+        .chat-box { text-align: left; margin-top: 30px; }
+        .label { font-size: 11px; color: #999; text-transform: uppercase; font-weight: bold; margin-bottom: 5px; letter-spacing: 1px; }
+        .text-output { background: #f8f9fa; padding: 15px; border-radius: 10px; border-left: 4px solid var(--primario); margin-bottom: 20px; font-size: 14px; color: #333; min-height: 20px; }
+        #status { font-size: 14px; color: var(--secundario); font-weight: 500; margin-top: 20px; height: 20px; }
     </style>
 </head>
 <body>
 
-<div class="recipiente">
-    <div class="logotipo">CEABS <span style="color:var(--secundario)">CRIS IA</span></div>
+<div class="container">
+    <div class="logo">CEABS <span style="color:var(--secundario)">CRIS IA</span></div>
     
     <button class="btn-mic" id="btnAction">🎤</button>
     <div id="status">Clique para iniciar</div>
 
-    <div class="caixa de bate-papo">
-        <div class="rótulo">Você disse:</div>
-        <div class="saída de texto" id="userText">---</div>
+    <div class="chat-box">
+        <div class="label">Você disse:</div>
+        <div class="text-output" id="userText">---</div>
 
-        <div class="rótulo">Cris respondeu:</div>
-        <div class="saída de texto" id="crisText">---</div>
+        <div class="label">Cris respondeu:</div>
+        <div class="text-output" id="crisText">---</div>
     </div>
 </div>
 
@@ -45,7 +45,7 @@
     const crisText = document.getElementById('crisText');
 
     btn.onclick = async () => {
-        btn.classList.add('ativo');
+        btn.classList.add('active');
         status.innerText = "A Cris está processando...";
         userText.innerText = "---";
         crisText.innerText = "---";
@@ -81,7 +81,7 @@
             status.innerText = "Erro ao falar com a Cris.";
             console.error(err);
         } finally {
-            btn.classList.remove('ativo');
+            btn.classList.remove('active');
         }
     };
 </script>
