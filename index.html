@@ -47,7 +47,7 @@
     </div>
 
     <div id="chat-window" class="chat-window">
-        <div class="message system">Olá Stephany! Como posso ajudar você e o time da CEABS hoje?</div>
+        <div class="message system">Olá Stephany! Como posso ajudar você hoje?</div>
     </div>
 
     <div class="input-group">
@@ -57,8 +57,11 @@
 </div>
 
 <script>
-    // Endpoint ajustado para sua rota /chat no estágio v2
-    const API_ENDPOINT = "https://x0ht8akouf.execute-api.sa-east-1.amazonaws.com/v2/";
+    // Configuração das rotas baseada no seu API Gateway
+    const URL_BASE = "https://x0ht8akouf.execute-api.sa-east-1.amazonaws.com/v2";
+    const ENDPOINT_VOZ = URL_BASE + "/";      // Rota ANY /
+    const ENDPOINT_CHAT = URL_BASE + "/chat"; // Rota ANY /chat
+
     const btnMic = document.getElementById('btnAction');
     const btnSend = document.getElementById('btnSend');
     const status = document.getElementById('status');
@@ -76,7 +79,7 @@
         chatWindow.scrollTop = chatWindow.scrollHeight;
     }
 
-    // --- LÓGICA DE VOZ ---
+    // --- LÓGICA DE VOZ (ROTA RAIZ) ---
     btnMic.onclick = async () => {
         if (btnMic.classList.contains('active')) {
             mediaRecorder.stop();
@@ -94,7 +97,7 @@
                     reader.readAsDataURL(audioBlob);
                     reader.onloadend = () => {
                         const base64 = reader.result.split(',')[1];
-                        enviarParaCris({ audio_base64: base64 });
+                        enviarParaCris({ audio_base64: base64 }, ENDPOINT_VOZ);
                     };
                 };
                 mediaRecorder.start();
@@ -106,23 +109,23 @@
         }
     };
 
-    // --- LÓGICA DE CHAT (TEXTO) ---
+    // --- LÓGICA DE CHAT (ROTA /CHAT) ---
     btnSend.onclick = () => {
         const text = chatInput.value.trim();
         if (text) {
             chatInput.value = "";
             addMessage(text, 'user');
-            enviarParaCris({ message: text });
+            enviarParaCris({ message: text }, ENDPOINT_CHAT);
         }
     };
 
     chatInput.onkeypress = (e) => { if(e.key === 'Enter') btnSend.click(); };
 
-    // --- COMUNICAÇÃO UNIFICADA SEM CATCH ---
-    async function enviarParaCris(payload) {
+    // --- COMUNICAÇÃO UNIFICADA ---
+    async function enviarParaCris(payload, urlDestino) {
         status.innerText = "A Cris está pensando...";
         
-        const response = await fetch(API_ENDPOINT, {
+        const response = await fetch(urlDestino, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -130,15 +133,15 @@
         
         const data = await response.json();
 
-        // Se a Lambda de voz devolver o texto que ouviu
+        // Se a Lambda de voz (rota raiz) devolver o que entendeu
         if (data.ouvi) addMessage(data.ouvi, 'user');
 
-        // Exibe a resposta de texto (vinda do campo 'response' ou 'cris_respondeu')
+        // Exibe a resposta de texto da Cris
         if (data.response || data.cris_respondeu) {
             addMessage(data.response || data.cris_respondeu, 'cris');
         }
 
-        // Executa o áudio da Polly se estiver presente no base64
+        // Executa o áudio da Polly se estiver presente (rota de voz)
         if (data.audio_64) {
             const audio = new Audio("data:audio/mp3;base64," + data.audio_64);
             audio.play();
