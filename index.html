@@ -57,7 +57,8 @@
 </div>
 
 <script>
-    const API_ENDPOINT = "https://x0ht8akouf.execute-api.sa-east-1.amazonaws.com/v2";
+    // URL completa com a rota /chat conforme seu API Gateway
+    const API_ENDPOINT = "https://x0ht8akouf.execute-api.sa-east-1.amazonaws.com/v2/chat";
     const btnMic = document.getElementById('btnAction');
     const btnSend = document.getElementById('btnSend');
     const status = document.getElementById('status');
@@ -75,7 +76,7 @@
         chatWindow.scrollTop = chatWindow.scrollHeight;
     }
 
-    // --- VOZ (AUDIO COMPLETO) ---
+    // --- VOZ ---
     btnMic.onclick = async () => {
         if (btnMic.classList.contains('active')) {
             mediaRecorder.stop();
@@ -105,7 +106,7 @@
         }
     };
 
-    // --- CHAT (TEXTO) ---
+    // --- CHAT ---
     btnSend.onclick = () => {
         const text = chatInput.value.trim();
         if (text) {
@@ -117,7 +118,7 @@
 
     chatInput.onkeypress = (e) => { if(e.key === 'Enter') btnSend.click(); };
 
-    // --- COMUNICAÇÃO UNIFICADA ---
+    // --- COMUNICAÇÃO (CORRIGIDA) ---
     async function enviarParaCris(payload) {
         status.innerText = "A Cris está pensando...";
         try {
@@ -126,17 +127,20 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
+            
+            if (!response.ok) throw new Error('Erro na resposta da AWS');
+            
             const data = await response.json();
 
-            // Se for voz, a Lambda deve devolver o que entendeu no campo 'ouvi'
+            // Se for voz, exibe o que a Cris ouviu
             if (data.ouvi) addMessage(data.ouvi, 'user');
 
-            // Resposta de texto da Cris
+            // Resposta de texto
             if (data.response || data.cris_respondeu) {
                 addMessage(data.response || data.cris_respondeu, 'cris');
             }
 
-            // Resposta de áudio da Cris (Polly)
+            // Play no áudio da Polly
             if (data.audio_64) {
                 const audio = new Audio("data:audio/mp3;base64," + data.audio_64);
                 audio.play();
@@ -144,8 +148,8 @@
             } else {
                 status.innerText = "Aguardando...";
             }
-        }
-    }
+    } // Chave de fechamento da função que faltava
 </script>
 </body>
+</html>
 </html>
