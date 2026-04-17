@@ -47,7 +47,7 @@
     </div>
 
     <div id="chat-window" class="chat-window">
-        <div class="message system">Olá Stephany! Como posso ajudar você e o time da CEABS hoje?</div>
+        <div class="message system">Olá Stephany! Como posso ajudar você hoje?</div>
     </div>
 
     <div class="input-group">
@@ -144,10 +144,6 @@
             } else {
                 status.innerText = "Aguardando...";
             }
-        } catch (err) {
-            console.error(err);
-            status.innerText = "Erro de conexão.";
-            addMessage("Não consegui conectar com a AWS agora.", 'cris');
         }
     }
 </script>
