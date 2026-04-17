@@ -47,7 +47,7 @@
     </div>
 
     <div id="chat-window" class="chat-window">
-        <div class="message system">Olá Stephany! Como posso ajudar você hoje?</div>
+        <div class="message system">Olá Stephany! Como posso ajudar você e o time da CEABS hoje?</div>
     </div>
 
     <div class="input-group">
@@ -57,8 +57,8 @@
 </div>
 
 <script>
-    // URL completa com a rota /chat conforme seu API Gateway
-    const API_ENDPOINT = "https://x0ht8akouf.execute-api.sa-east-1.amazonaws.com/v2/chat";
+    // Endpoint ajustado para sua rota /chat no estágio v2
+    const API_ENDPOINT = "https://x0ht8akouf.execute-api.sa-east-1.amazonaws.com/v2/";
     const btnMic = document.getElementById('btnAction');
     const btnSend = document.getElementById('btnSend');
     const status = document.getElementById('status');
@@ -76,7 +76,7 @@
         chatWindow.scrollTop = chatWindow.scrollHeight;
     }
 
-    // --- VOZ ---
+    // --- LÓGICA DE VOZ ---
     btnMic.onclick = async () => {
         if (btnMic.classList.contains('active')) {
             mediaRecorder.stop();
@@ -106,7 +106,7 @@
         }
     };
 
-    // --- CHAT ---
+    // --- LÓGICA DE CHAT (TEXTO) ---
     btnSend.onclick = () => {
         const text = chatInput.value.trim();
         if (text) {
@@ -118,38 +118,35 @@
 
     chatInput.onkeypress = (e) => { if(e.key === 'Enter') btnSend.click(); };
 
-    // --- COMUNICAÇÃO (CORRIGIDA) ---
+    // --- COMUNICAÇÃO UNIFICADA SEM CATCH ---
     async function enviarParaCris(payload) {
         status.innerText = "A Cris está pensando...";
-        try {
-            const response = await fetch(API_ENDPOINT, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            
-            if (!response.ok) throw new Error('Erro na resposta da AWS');
-            
-            const data = await response.json();
+        
+        const response = await fetch(API_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        const data = await response.json();
 
-            // Se for voz, exibe o que a Cris ouviu
-            if (data.ouvi) addMessage(data.ouvi, 'user');
+        // Se a Lambda de voz devolver o texto que ouviu
+        if (data.ouvi) addMessage(data.ouvi, 'user');
 
-            // Resposta de texto
-            if (data.response || data.cris_respondeu) {
-                addMessage(data.response || data.cris_respondeu, 'cris');
-            }
+        // Exibe a resposta de texto (vinda do campo 'response' ou 'cris_respondeu')
+        if (data.response || data.cris_respondeu) {
+            addMessage(data.response || data.cris_respondeu, 'cris');
+        }
 
-            // Play no áudio da Polly
-            if (data.audio_64) {
-                const audio = new Audio("data:audio/mp3;base64," + data.audio_64);
-                audio.play();
-                status.innerText = "Cris falando...";
-            } else {
-                status.innerText = "Aguardando...";
-            }
-    } // Chave de fechamento da função que faltava
+        // Executa o áudio da Polly se estiver presente no base64
+        if (data.audio_64) {
+            const audio = new Audio("data:audio/mp3;base64," + data.audio_64);
+            audio.play();
+            status.innerText = "Cris falando...";
+        } else {
+            status.innerText = "Aguardando...";
+        }
+    }
 </script>
 </body>
-</html>
 </html>
