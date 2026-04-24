@@ -79,36 +79,42 @@
         chatWindow.scrollTop = chatWindow.scrollHeight;
     }
 
-    // --- LÓGICA DE VOZ (ROTA RAIZ) ---
-    btnMic.onclick = async () => {
-        if (btnMic.classList.contains('active')) {
-            mediaRecorder.stop();
-            btnMic.classList.remove('active');
-            status.innerText = "Processando áudio...";
-        } else {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
-                audioChunks = [];
-                mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
-                mediaRecorder.onstop = async () => {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/ogg' });
-                    const reader = new FileReader();
-                    reader.readAsDataURL(audioBlob);
-                    reader.onloadend = () => {
-                        const base64 = reader.result.split(',')[1];
-                        enviarParaCris({ audio_base64: base64 }, ENDPOINT_VOZ);
-                    };
+    // --- LÓGICA DE VOZ (TRECHO ATUALIZADO) ---
+btnMic.onclick = async () => {
+    if (btnMic.classList.contains('active')) {
+        mediaRecorder.stop();
+        btnMic.classList.remove('active');
+        status.innerText = "Processando áudio...";
+    } else {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            
+            // Força o tipo para webm para evitar erro de arquivo inválido
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+            audioChunks = [];
+            
+            mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+            
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                const reader = new FileReader();
+                reader.readAsDataURL(audioBlob);
+                reader.onloadend = () => {
+                    const base64 = reader.result.split(',')[1];
+                    // Envia para a Lambda
+                    enviarParaCris({ audio_base64: base64 }, ENDPOINT_VOZ);
                 };
-                mediaRecorder.start();
-                btnMic.classList.add('active');
-                status.innerText = "Ouvindo... clique para parar.";
-            } catch (err) {
-                status.innerText = "Erro ao acessar microfone.";
-            }
+            };
+            
+            mediaRecorder.start();
+            btnMic.classList.add('active');
+            status.innerText = "Ouvindo... clique para parar.";
+        } catch (err) {
+            console.error(err);
+            status.innerText = "Erro ao acessar microfone.";
         }
-    };
-
+    }
+};
     // --- LÓGICA DE CHAT (ROTA /CHAT) ---
     btnSend.onclick = () => {
         const text = chatInput.value.trim();
