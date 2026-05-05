@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cris IA - Painel CEABS</title>
+    <title>Cris IA - Voz CEABS</title>
     <style>
         :root { 
             --primary: #002d5e;   /* Azul Marinho CEABS */
@@ -12,148 +12,114 @@
         }
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         
-        .container { background: white; width: 95%; max-width: 450px; padding: 30px; border-radius: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); text-align: center; }
-        .logo { font-weight: 800; color: var(--primary); font-size: 24px; margin-bottom: 20px; letter-spacing: -1px; }
+        .container { background: white; width: 95%; max-width: 400px; padding: 40px; border-radius: 30px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); text-align: center; }
+        .logo { font-weight: 800; color: var(--primary); font-size: 26px; margin-bottom: 30px; letter-spacing: -1px; }
         
-        /* Controle de Voz */
-        .voice-section { margin-bottom: 20px; }
-        .btn-mic { background: var(--primary); color: white; border: none; width: 80px; height: 80px; border-radius: 50%; font-size: 32px; cursor: pointer; transition: 0.3s; display: inline-flex; justify-content: center; align-items: center; outline: none; box-shadow: 0 6px 15px rgba(0,45,94,0.3); }
+        .voice-section { margin-bottom: 10px; }
+        .btn-mic { background: var(--primary); color: white; border: none; width: 100px; height: 100px; border-radius: 50%; font-size: 40px; cursor: pointer; transition: 0.3s; display: inline-flex; justify-content: center; align-items: center; outline: none; box-shadow: 0 8px 20px rgba(0,45,94,0.3); }
+        
+        /* Animação de pulso quando estiver gravando */
         .btn-mic.active { animation: pulse 1.5s infinite; background: #ff4b4b; transform: scale(1.1); }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,75,75,0.7); } 70% { box-shadow: 0 0 0 15px rgba(255,75,75,0); } 100% { box-shadow: 0 0 0 0 rgba(255,75,75,0); } }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,75,75,0.7); } 70% { box-shadow: 0 0 0 20px rgba(255,75,75,0); } 100% { box-shadow: 0 0 0 0 rgba(255,75,75,0); } }
         
-        #status { font-size: 13px; color: #888; margin-top: 10px; height: 18px; font-weight: 500; }
-
-        /* Janela de Chat */
-        .chat-window { height: 280px; background: #f9f9f9; border: 1px solid #eee; border-radius: 15px; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
-        .message { max-width: 85%; padding: 10px 14px; border-radius: 15px; font-size: 14px; line-height: 1.4; word-wrap: break-word; text-align: left; }
-        .message.user { align-self: flex-end; background: var(--primary); color: white; border-bottom-right-radius: 2px; }
-        .message.cris { align-self: flex-start; background: white; color: #333; border: 1px solid #eee; border-bottom-left-radius: 2px; border-left: 4px solid var(--secondary); }
-        .message.system { align-self: center; font-size: 11px; color: #bbb; background: transparent; }
-
-        /* Input de Texto */
-        .input-group { display: flex; gap: 8px; }
-        #chatInput { flex-grow: 1; padding: 12px; border-radius: 10px; border: 1px solid #ddd; outline: none; }
-        #btnSend { background: var(--secondary); color: white; border: none; border-radius: 10px; padding: 0 15px; cursor: pointer; font-weight: bold; }
+        #status { font-size: 14px; color: #666; margin-top: 20px; font-weight: 500; min-height: 20px; }
+        .hint { font-size: 12px; color: #bbb; margin-top: 10px; }
+        
+        /* Visualização Simples do que a Cris disse (opcional) */
+        #transcript { margin-top: 25px; font-style: italic; color: var(--primary); font-size: 14px; line-height: 1.4; padding: 10px; background: #f9f9f9; border-radius: 10px; min-height: 40px; display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="logo">CEABS <span style="color:var(--secondary)">CRIS IA</span></div>
+    <div class="logo">CEABS <span style="color:var(--secondary)">CRIS VOZ</span></div>
     
     <div class="voice-section">
         <button class="btn-mic" id="btnAction">🎤</button>
-        <div id="status">Clique no microfone para falar</div>
+        <div id="status">Clique para iniciar o atendimento</div>
+        <div class="hint">Fale sobre agendamento, suporte ou serviços.</div>
     </div>
 
-    <div id="chat-window" class="chat-window">
-        <div class="message system">Olá Stephany! Como posso ajudar você hoje?</div>
-    </div>
-
-    <div class="input-group">
-        <input type="text" id="chatInput" placeholder="Digite sua mensagem...">
-        <button id="btnSend">Enviar</button>
-    </div>
+    <div id="transcript"></div>
 </div>
 
 <script>
-    // Configuração das rotas baseada no seu API Gateway
-    const URL_BASE = "https://x0ht8akouf.execute-api.sa-east-1.amazonaws.com/v2";
-    const ENDPOINT_VOZ = URL_BASE + "/";      // Rota ANY /
-    const ENDPOINT_CHAT = URL_BASE + "/chat"; // Rota ANY /chat
+    // Endpoint do seu API Gateway (Rota de Voz)
+    const ENDPOINT_VOZ = "https://x0ht8akouf.execute-api.sa-east-1.amazonaws.com/v2/";
 
     const btnMic = document.getElementById('btnAction');
-    const btnSend = document.getElementById('btnSend');
     const status = document.getElementById('status');
-    const chatWindow = document.getElementById('chat-window');
-    const chatInput = document.getElementById('chatInput');
+    const transcriptDiv = document.getElementById('transcript');
 
     let mediaRecorder;
     let audioChunks = [];
 
-    function addMessage(text, side) {
-        const div = document.createElement('div');
-        div.classList.add('message', side);
-        div.innerText = text;
-        chatWindow.appendChild(div);
-        chatWindow.scrollTop = chatWindow.scrollHeight;
-    }
-
-    // --- LÓGICA DE VOZ (TRECHO ATUALIZADO) ---
-btnMic.onclick = async () => {
-    if (btnMic.classList.contains('active')) {
-        mediaRecorder.stop();
-        btnMic.classList.remove('active');
-        status.innerText = "Processando áudio...";
-    } else {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            
-            // Força o tipo para webm para evitar erro de arquivo inválido
-            mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-            audioChunks = [];
-            
-            mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
-            
-            mediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                const reader = new FileReader();
-                reader.readAsDataURL(audioBlob);
-                reader.onloadend = () => {
-                    const base64 = reader.result.split(',')[1];
-                    // Envia para a Lambda
-                    enviarParaCris({ audio_base64: base64 }, ENDPOINT_VOZ);
+    btnMic.onclick = async () => {
+        if (btnMic.classList.contains('active')) {
+            mediaRecorder.stop();
+            btnMic.classList.remove('active');
+            status.innerText = "Processando sua fala...";
+        } else {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                audioChunks = [];
+                
+                mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+                
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const reader = new FileReader();
+                    reader.readAsDataURL(audioBlob);
+                    reader.onloadend = () => {
+                        const base64 = reader.result.split(',')[1];
+                        enviarParaCris({ audio_base64: base64 });
+                    };
                 };
-            };
-            
-            mediaRecorder.start();
-            btnMic.classList.add('active');
-            status.innerText = "Ouvindo... clique para parar.";
-        } catch (err) {
-            console.error(err);
-            status.innerText = "Erro ao acessar microfone.";
-        }
-    }
-};
-    // --- LÓGICA DE CHAT (ROTA /CHAT) ---
-    btnSend.onclick = () => {
-        const text = chatInput.value.trim();
-        if (text) {
-            chatInput.value = "";
-            addMessage(text, 'user');
-            enviarParaCris({ message: text }, ENDPOINT_CHAT);
+                
+                mediaRecorder.start();
+                btnMic.classList.add('active');
+                status.innerText = "Ouvindo... clique para parar.";
+                transcriptDiv.style.display = "none";
+            } catch (err) {
+                console.error(err);
+                status.innerText = "Erro: Sem acesso ao microfone.";
+            }
         }
     };
 
-    chatInput.onkeypress = (e) => { if(e.key === 'Enter') btnSend.click(); };
-
-    // --- COMUNICAÇÃO UNIFICADA ---
-    async function enviarParaCris(payload, urlDestino) {
-        status.innerText = "A Cris está pensando...";
+    async function enviarParaCris(payload) {
+        status.innerText = "A Cris está processando...";
         
-        const response = await fetch(urlDestino, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        
-        const data = await response.json();
+        try {
+            const response = await fetch(ENDPOINT_VOZ, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            const data = await response.json();
 
-        // Se a Lambda de voz (rota raiz) devolver o que entendeu
-        if (data.ouvi) addMessage(data.ouvi, 'user');
+            // 1. Mostra o que a Cris entendeu/respondeu em texto (ajuda na acessibilidade)
+            if (data.cris_respondeu || data.response) {
+                transcriptDiv.innerText = "Cris: " + (data.cris_respondeu || data.response);
+                transcriptDiv.style.display = "block";
+            }
 
-        // Exibe a resposta de texto da Cris
-        if (data.response || data.cris_respondeu) {
-            addMessage(data.response || data.cris_respondeu, 'cris');
-        }
-
-        // Executa o áudio da Polly se estiver presente (rota de voz)
-        if (data.audio_64) {
-            const audio = new Audio("data:audio/mp3;base64," + data.audio_64);
-            audio.play();
-            status.innerText = "Cris falando...";
-        } else {
-            status.innerText = "Aguardando...";
+            // 2. Toca a voz da Polly
+            if (data.audio_64) {
+                const audio = new Audio("data:audio/mp3;base64," + data.audio_64);
+                status.innerText = "Cris falando...";
+                audio.play();
+                audio.onended = () => {
+                    status.innerText = "Aguardando próxima pergunta...";
+                };
+            } else {
+                status.innerText = "Pronto! O que deseja agora?";
+            }
+        } catch (error) {
+            console.error("Erro na comunicação:", error);
+            status.innerText = "Erro ao falar com a Cris.";
         }
     }
 </script>
