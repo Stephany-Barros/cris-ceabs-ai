@@ -42,41 +42,80 @@
 </div>
 
 <script>
-    // Endpoint do seu API Gateway (Rota de Voz)
     const WS_URL = "wss://egvdqa1n2e.execute-api.us-east-1.amazonaws.com/production/";
     let socket;
+    let mediaRecorder;
 
     const btnMic = document.getElementById('btnAction');
     const status = document.getElementById('status');
+    const transcriptDiv = document.getElementById('transcript');
 
-    btnMic.onclick = () => {
-        if (!socket || socket.readyState !== WebSocket.OPEN) {
+    btnMic.onclick = async () => {
+        if (mediaRecorder && mediaRecorder.state === "recording") {
+            mediaRecorder.stop();
+            if(socket) socket.close();
+            return;
+        }
+
+        try {
+            status.innerText = "Solicitando microfone...";
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            
             status.innerText = "Conectando à Cris...";
             socket = new WebSocket(WS_URL);
 
             socket.onopen = () => {
-                status.innerText = "Conectado! Pode falar.";
+                status.innerText = "Ouvindo... (Clique de novo para parar)";
                 btnMic.classList.add('active');
-                // Envia uma mensagem de teste para a rota 'sendAudio' que você criou
-                socket.send(JSON.stringify({ action: "sendAudio", data: "Teste de conexão" }));
+                
+                mediaRecorder = new MediaRecorder(stream);
+                
+                mediaRecorder.ondataavailable = async (event) => {
+                    if (event.data.size > 0 && socket.readyState === WebSocket.OPEN) {
+                        const reader = new FileReader();
+                        reader.readAsDataURL(event.data); 
+                        reader.onloadend = () => {
+                            const base64Audio = reader.result.split(',')[1];
+                            socket.send(JSON.stringify({
+                                action: "sendAudio",
+                                data: base64Audio
+                            }));
+                        };
+                    }
+                };
+
+                mediaRecorder.start(1000);
             };
 
             socket.onmessage = (event) => {
-                console.log("Resposta da Cris:", event.data);
-                // Aqui você pode adicionar lógica para dar play no áudio que a Lambda enviar
+                const response = JSON.parse(event.data);
+                console.log("Resposta da Cris:", response);
+
+                if (response.cris_respondeu) {
+                    transcriptDiv.style.display = "block";
+                    transcriptDiv.innerText = "Cris: " + response.cris_respondeu;
+                }
+
+                if (response.audio_64) {
+                    const audio = new Audio("data:audio/mp3;base64," + response.audio_64);
+                    audio.play();
+                }
             };
 
             socket.onclose = () => {
-                status.innerText = "Conexão encerrada.";
+                status.innerText = "Atendimento finalizado.";
                 btnMic.classList.remove('active');
+                if(mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
             };
 
             socket.onerror = (err) => {
                 console.error("Erro no WebSocket:", err);
                 status.innerText = "Erro na conexão.";
             };
-        } else {
-            socket.close();
+
+        } catch (err) {
+            console.error("Erro ao acessar microfone:", err);
+            status.innerText = "Microfone negado ou não encontrado.";
         }
     };
 </script>
