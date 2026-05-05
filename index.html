@@ -18,14 +18,12 @@
         .voice-section { margin-bottom: 10px; }
         .btn-mic { background: var(--primary); color: white; border: none; width: 100px; height: 100px; border-radius: 50%; font-size: 40px; cursor: pointer; transition: 0.3s; display: inline-flex; justify-content: center; align-items: center; outline: none; box-shadow: 0 8px 20px rgba(0,45,94,0.3); }
         
-        /* Animação de pulso quando estiver gravando */
         .btn-mic.active { animation: pulse 1.5s infinite; background: #ff4b4b; transform: scale(1.1); }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,75,75,0.7); } 70% { box-shadow: 0 0 0 20px rgba(255,75,75,0); } 100% { box-shadow: 0 0 0 0 rgba(255,75,75,0); } }
         
         #status { font-size: 14px; color: #666; margin-top: 20px; font-weight: 500; min-height: 20px; }
         .hint { font-size: 12px; color: #bbb; margin-top: 10px; }
         
-        /* Visualização Simples do que a Cris disse (opcional) */
         #transcript { margin-top: 25px; font-style: italic; color: var(--primary); font-size: 14px; line-height: 1.4; padding: 10px; background: #f9f9f9; border-radius: 10px; min-height: 40px; display: none; }
     </style>
 </head>
@@ -45,83 +43,42 @@
 
 <script>
     // Endpoint do seu API Gateway (Rota de Voz)
-    const ENDPOINT_VOZ = "https://x0ht8akouf.execute-api.sa-east-1.amazonaws.com/v2/";
+    const WS_URL = "wss://egvdqa1n2e.execute-api.us-east-1.amazonaws.com/production/";
+    let socket;
 
     const btnMic = document.getElementById('btnAction');
     const status = document.getElementById('status');
-    const transcriptDiv = document.getElementById('transcript');
 
-    let mediaRecorder;
-    let audioChunks = [];
+    btnMic.onclick = () => {
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+            status.innerText = "Conectando à Cris...";
+            socket = new WebSocket(WS_URL);
 
-    btnMic.onclick = async () => {
-        if (btnMic.classList.contains('active')) {
-            mediaRecorder.stop();
-            btnMic.classList.remove('active');
-            status.innerText = "Processando sua fala...";
-        } else {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-                audioChunks = [];
-                
-                mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
-                
-                mediaRecorder.onstop = async () => {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                    const reader = new FileReader();
-                    reader.readAsDataURL(audioBlob);
-                    reader.onloadend = () => {
-                        const base64 = reader.result.split(',')[1];
-                        enviarParaCris({ audio_base64: base64 });
-                    };
-                };
-                
-                mediaRecorder.start();
+            socket.onopen = () => {
+                status.innerText = "Conectado! Pode falar.";
                 btnMic.classList.add('active');
-                status.innerText = "Ouvindo... clique para parar.";
-                transcriptDiv.style.display = "none";
-            } catch (err) {
-                console.error(err);
-                status.innerText = "Erro: Sem acesso ao microfone.";
-            }
+                // Envia uma mensagem de teste para a rota 'sendAudio' que você criou
+                socket.send(JSON.stringify({ action: "sendAudio", data: "Teste de conexão" }));
+            };
+
+            socket.onmessage = (event) => {
+                console.log("Resposta da Cris:", event.data);
+                // Aqui você pode adicionar lógica para dar play no áudio que a Lambda enviar
+            };
+
+            socket.onclose = () => {
+                status.innerText = "Conexão encerrada.";
+                btnMic.classList.remove('active');
+            };
+
+            socket.onerror = (err) => {
+                console.error("Erro no WebSocket:", err);
+                status.innerText = "Erro na conexão.";
+            };
+        } else {
+            socket.close();
         }
     };
-
-    async function enviarParaCris(payload) {
-        status.innerText = "A Cris está processando...";
-        
-        try {
-            const response = await fetch(ENDPOINT_VOZ, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            
-            const data = await response.json();
-
-            // 1. Mostra o que a Cris entendeu/respondeu em texto (ajuda na acessibilidade)
-            if (data.cris_respondeu || data.response) {
-                transcriptDiv.innerText = "Cris: " + (data.cris_respondeu || data.response);
-                transcriptDiv.style.display = "block";
-            }
-
-            // 2. Toca a voz da Polly
-            if (data.audio_64) {
-                const audio = new Audio("data:audio/mp3;base64," + data.audio_64);
-                status.innerText = "Cris falando...";
-                audio.play();
-                audio.onended = () => {
-                    status.innerText = "Aguardando próxima pergunta...";
-                };
-            } else {
-                status.innerText = "Pronto! O que deseja agora?";
-            }
-        } catch (error) {
-            console.error("Erro na comunicação:", error);
-            status.innerText = "Erro ao falar com a Cris.";
-        }
-    }
 </script>
 </body>
 </html>
