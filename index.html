@@ -51,9 +51,11 @@
     const transcriptDiv = document.getElementById('transcript');
 
     btnMic.onclick = async () => {
+        // Se já estiver gravando, para a gravação mas mantém o socket aberto para receber a resposta
         if (mediaRecorder && mediaRecorder.state === "recording") {
-            mediaRecorder.stop();
-            if(socket) socket.close();
+            status.innerText = "Processando sua pergunta...";
+            mediaRecorder.stop(); 
+            btnMic.classList.remove('active');
             return;
         }
 
@@ -65,7 +67,8 @@
             socket = new WebSocket(WS_URL);
 
             socket.onopen = () => {
-                status.innerText = "Ouvindo... (Clique de novo para parar)";
+                console.log("Conectado à AWS");
+                status.innerText = "Ouvindo... Fale agora.";
                 btnMic.classList.add('active');
                 
                 mediaRecorder = new MediaRecorder(stream);
@@ -76,6 +79,7 @@
                         reader.readAsDataURL(event.data); 
                         reader.onloadend = () => {
                             const base64Audio = reader.result.split(',')[1];
+                            console.log("Enviando áudio para a Lambda...");
                             socket.send(JSON.stringify({
                                 action: "sendAudio",
                                 data: base64Audio
@@ -84,28 +88,31 @@
                     }
                 };
 
-                mediaRecorder.start(1000);
+                // Coleta o áudio e envia quando o usuário parar (ou a cada 4s se falar muito)
+                mediaRecorder.start(4000); 
             };
 
             socket.onmessage = (event) => {
+                console.log("Mensagem recebida da AWS:", event.data);
                 const response = JSON.parse(event.data);
-                console.log("Resposta da Cris:", response);
 
                 if (response.cris_respondeu) {
                     transcriptDiv.style.display = "block";
                     transcriptDiv.innerText = "Cris: " + response.cris_respondeu;
+                    status.innerText = "Cris respondeu!";
                 }
 
                 if (response.audio_64) {
+                    console.log("Tocando áudio da Cris...");
                     const audio = new Audio("data:audio/mp3;base64," + response.audio_64);
-                    audio.play();
+                    audio.play().catch(e => console.error("Erro no autoplay:", e));
                 }
             };
 
             socket.onclose = () => {
+                console.log("Conexão encerrada.");
                 status.innerText = "Atendimento finalizado.";
                 btnMic.classList.remove('active');
-                if(mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
             };
 
             socket.onerror = (err) => {
@@ -114,8 +121,8 @@
             };
 
         } catch (err) {
-            console.error("Erro ao acessar microfone:", err);
-            status.innerText = "Microfone negado ou não encontrado.";
+            console.error("Erro de acesso:", err);
+            status.innerText = "Microfone negado.";
         }
     };
 </script>
