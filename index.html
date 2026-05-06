@@ -24,7 +24,7 @@
         #status { font-size: 14px; color: #666; margin-top: 20px; font-weight: 500; min-height: 20px; }
         .hint { font-size: 12px; color: #bbb; margin-top: 10px; }
         
-        #transcript { margin-top: 25px; font-style: italic; color: var(--primary); font-size: 14px; line-height: 1.4; padding: 10px; background: #f9f9f9; border-radius: 10px; min-height: 40px; display: none; }
+        #transcript { margin-top: 25px; font-style: italic; color: var(--primary); font-size: 14px; line-height: 1.4; padding: 15px; background: #f9f9f9; border-radius: 10px; min-height: 40px; display: none; white-space: pre-wrap; text-align: left; }
     </style>
 </head>
 <body>
@@ -41,88 +41,148 @@
     <div id="transcript"></div>
 </div>
 
-<script>
+<!-- Polyfill para o Buffer (Necessário para o SDK da AWS no Browser) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/buffer/6.0.3/buffer.min.js"></script>
+<script>window.Buffer = window.Buffer || buffer.Buffer;</script>
+
+<script type="module">
+    import { TranscribeStreamingClient, StartStreamTranscriptionCommand } from "https://cdn.skypack.dev/@aws-sdk/client-transcribe-streaming";
+    import { fromCognitoIdentityPool } from "https://cdn.skypack.dev/@aws-sdk/credential-providers";
+
+    // --- CONFIGURAÇÕES ---
     const WS_URL = "wss://egvdqa1n2e.execute-api.us-east-1.amazonaws.com/production/";
+    const REGION = "us-east-1";
+    const IDENTITY_POOL_ID = "us-east-1:3827df92-0a3e-431c-8710-636047b5d286";
+
     let socket;
-    let mediaRecorder;
+    let transcribeClient;
+    let isRecording = false;
+    let audioContext;
+    let processor;
+    let globalStream;
 
     const btnMic = document.getElementById('btnAction');
     const status = document.getElementById('status');
     const transcriptDiv = document.getElementById('transcript');
 
+    // Função para converter Float32 para Int16 (PCM)
+    const pcmEncode = (input) => {
+        let offset = 0;
+        let buffer = new ArrayBuffer(input.length * 2);
+        let view = new DataView(buffer);
+        for (let i = 0; i < input.length; i++, offset += 2) {
+            let s = Math.max(-1, Math.min(1, input[i]));
+            view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        }
+        return new Uint8Array(buffer);
+    };
+
+    const stopAll = () => {
+        isRecording = false;
+        if (globalStream) globalStream.getTracks().forEach(track => track.stop());
+        if (audioContext) audioContext.close();
+        if (socket) socket.close();
+        btnMic.classList.remove('active');
+        status.innerText = "Atendimento finalizado.";
+    };
+
     btnMic.onclick = async () => {
-        // Se já estiver gravando, para a gravação mas mantém o socket aberto para receber a resposta
-        if (mediaRecorder && mediaRecorder.state === "recording") {
-            status.innerText = "Processando sua pergunta...";
-            mediaRecorder.stop(); 
-            btnMic.classList.remove('active');
+        if (isRecording) {
+            stopAll();
             return;
         }
 
         try {
-            status.innerText = "Solicitando microfone...";
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            
-            status.innerText = "Conectando à Cris...";
+            status.innerText = "Conectando...";
+            isRecording = true;
+
+            // 1. WebSocket para ouvir a Cris
             socket = new WebSocket(WS_URL);
-
-            socket.onopen = () => {
-                console.log("Conectado à AWS");
-                status.innerText = "Ouvindo... Fale agora.";
+            
+            socket.onopen = async () => {
                 btnMic.classList.add('active');
+                status.innerText = "Ouvindo... Pode falar.";
                 
-                mediaRecorder = new MediaRecorder(stream);
-                
-                mediaRecorder.ondataavailable = async (event) => {
-                    if (event.data.size > 0 && socket.readyState === WebSocket.OPEN) {
-                        const reader = new FileReader();
-                        reader.readAsDataURL(event.data); 
-                        reader.onloadend = () => {
-                            const base64Audio = reader.result.split(',')[1];
-                            console.log("Enviando áudio para a Lambda...");
-                            socket.send(JSON.stringify({
-                                action: "sendAudio",
-                                data: base64Audio
-                            }));
-                        };
-                    }
-                };
+                // 2. Setup do Áudio
+                globalStream = await navigator.mediaDevices.getUserMedia({
+                    audio: { sampleRate: 44100, channelCount: 1 }
+                });
 
-                // Coleta o áudio e envia quando o usuário parar (ou a cada 4s se falar muito)
-                mediaRecorder.start(4000); 
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                const source = audioContext.createMediaStreamSource(globalStream);
+                processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+                // 3. AWS Transcribe Client
+                transcribeClient = new TranscribeStreamingClient({
+                    region: REGION,
+                    credentials: fromCognitoIdentityPool({
+                        identityPoolId: IDENTITY_POOL_ID,
+                        clientConfig: { region: REGION }
+                    })
+                });
+
+                const command = new StartStreamTranscriptionCommand({
+                    LanguageCode: "pt-BR",
+                    MediaSampleRateHertz: 16000,
+                    MediaEncoding: "pcm",
+                    AudioStream: (async function* () {
+                        for await (const chunk of audioGenerator()) {
+                            yield { AudioEvent: { AudioChunk: chunk } };
+                        }
+                    })()
+                });
+
+                // Inicia o fluxo de transcrição
+                const response = await transcribeClient.send(command);
+
+                for await (const event of response.TranscriptResultStream) {
+                    const results = event.TranscriptEvent.Transcript.Results;
+                    if (results.length > 0 && !results[0].IsPartial) {
+                        const text = results[0].Alternatives[0].Transcript;
+                        
+                        // Exibe no log e envia texto para Lambda
+                        transcriptDiv.style.display = "block";
+                        transcriptDiv.innerText = "Você: " + text;
+                        
+                        socket.send(JSON.stringify({
+                            action: "sendText",
+                            text: text
+                        }));
+                    }
+                }
             };
 
             socket.onmessage = (event) => {
-                console.log("Mensagem recebida da AWS:", event.data);
-                const response = JSON.parse(event.data);
-
-                if (response.cris_respondeu) {
-                    transcriptDiv.style.display = "block";
-                    transcriptDiv.innerText = "Cris: " + response.cris_respondeu;
-                    status.innerText = "Cris respondeu!";
+                const data = JSON.parse(event.data);
+                if (data.cris_respondeu) {
+                    transcriptDiv.innerText += "\n\nCris: " + data.cris_respondeu;
                 }
-
-                if (response.audio_64) {
-                    console.log("Tocando áudio da Cris...");
-                    const audio = new Audio("data:audio/mp3;base64," + response.audio_64);
-                    audio.play().catch(e => console.error("Erro no autoplay:", e));
+                if (data.audio_64) {
+                    const audio = new Audio("data:audio/mp3;base64," + data.audio_64);
+                    audio.play();
                 }
             };
 
-            socket.onclose = () => {
-                console.log("Conexão encerrada.");
-                status.innerText = "Atendimento finalizado.";
-                btnMic.classList.remove('active');
-            };
-
-            socket.onerror = (err) => {
-                console.error("Erro no WebSocket:", err);
-                status.innerText = "Erro na conexão.";
-            };
+            socket.onerror = () => { status.innerText = "Erro na conexão."; stopAll(); };
 
         } catch (err) {
-            console.error("Erro de acesso:", err);
-            status.innerText = "Microfone negado.";
+            console.error(err);
+            status.innerText = "Erro ao acessar microfone.";
+            isRecording = false;
+        }
+
+        // Gerador de chunks de áudio
+        async function* audioGenerator() {
+            while (isRecording) {
+                yield await new Promise(resolve => {
+                    processor.onaudioprocess = (e) => {
+                        const pcm = pcmEncode(e.inputBuffer.getChannelData(0));
+                        resolve(pcm);
+                    };
+                    source.connect(processor);
+                    processor.connect(audioContext.destination);
+                });
+            }
         }
     };
 </script>
