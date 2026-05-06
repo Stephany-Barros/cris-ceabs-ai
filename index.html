@@ -3,188 +3,253 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cris IA - Voz CEABS</title>
+    <title>CEABS - Cris Voz</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        :root { 
-            --primary: #002d5e;   /* Azul Marinho CEABS */
-            --secondary: #ff8c00; /* Laranja CEABS */
-            --bg: #f4f7f6; 
+        :root {
+            --primary: #003366;
+            --accent: #ff9900;
+            --bg-light: #f4f7f9;
         }
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        
-        .container { background: white; width: 95%; max-width: 400px; padding: 40px; border-radius: 30px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); text-align: center; }
-        .logo { font-weight: 800; color: var(--primary); font-size: 26px; margin-bottom: 30px; letter-spacing: -1px; }
-        
-        .voice-section { margin-bottom: 10px; }
-        .btn-mic { background: var(--primary); color: white; border: none; width: 100px; height: 100px; border-radius: 50%; font-size: 40px; cursor: pointer; transition: 0.3s; display: inline-flex; justify-content: center; align-items: center; outline: none; box-shadow: 0 8px 20px rgba(0,45,94,0.3); }
-        
-        .btn-mic.active { animation: pulse 1.5s infinite; background: #ff4b4b; transform: scale(1.1); }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,75,75,0.7); } 70% { box-shadow: 0 0 0 20px rgba(255,75,75,0); } 100% { box-shadow: 0 0 0 0 rgba(255,75,75,0); } }
-        
-        #status { font-size: 14px; color: #666; margin-top: 20px; font-weight: 500; min-height: 20px; }
-        .hint { font-size: 12px; color: #bbb; margin-top: 10px; }
-        
-        #transcript { margin-top: 25px; font-style: italic; color: var(--primary); font-size: 14px; line-height: 1.4; padding: 15px; background: #f9f9f9; border-radius: 10px; min-height: 40px; display: none; white-space: pre-wrap; text-align: left; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-light);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background: white;
+            padding: 3rem;
+            border-radius: 24px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            text-align: center;
+            max-width: 450px;
+            width: 90%;
+        }
+
+        .logo {
+            font-weight: 800;
+            font-size: 1.8rem;
+            color: var(--primary);
+            margin-bottom: 2rem;
+        }
+
+        .logo span { color: var(--accent); }
+
+        .mic-button {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 1.5rem;
+            outline: none;
+        }
+
+        .mic-button svg {
+            fill: white;
+            width: 40px;
+            height: 40px;
+        }
+
+        .mic-button.active {
+            background: #e74c3c;
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(231, 76, 60, 0.4);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        #status {
+            color: #666;
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+        }
+
+        #transcript {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #f9f9f9;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            text-align: left;
+            color: #333;
+            max-height: 150px;
+            overflow-y: auto;
+            display: none;
+            border-left: 4px solid var(--accent);
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="logo">CEABS <span style="color:var(--secondary)">CRIS VOZ</span></div>
-    
-    <div class="voice-section">
-        <button class="btn-mic" id="btnAction">🎤</button>
+    <div class="container">
+        <div class="logo">CEABS <span>CRIS VOZ</span></div>
+        
+        <button id="btnAction" class="mic-button">
+            <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+        </button>
+
         <div id="status">Clique para iniciar o atendimento</div>
-        <div class="hint">Fale sobre agendamento, suporte ou serviços.</div>
+        <div id="transcript"></div>
     </div>
 
-    <div id="transcript"></div>
-</div>
+    <!-- SCRIPTS DE DEPENDÊNCIA (ORDEM CRÍTICA) -->
+    <!-- 1. Polyfill do Buffer para o Browser -->
+    <script src="https://bundle.run/buffer@6.0.3"></script>
+    <script>
+        window.Buffer = window.buffer.Buffer;
+    </script>
 
-<!-- Polyfill para o Buffer (Necessário para o SDK da AWS no Browser) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/buffer/6.0.3/buffer.min.js"></script>
-<script>window.Buffer = window.Buffer || buffer.Buffer;</script>
+    <!-- 2. SDK da AWS via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@aws-sdk/client-transcribe-streaming@3.500.0/dist-browser/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@aws-sdk/credential-providers@3.500.0/dist-browser/index.js"></script>
 
-<script type="module">
-    import { TranscribeStreamingClient, StartStreamTranscriptionCommand } from "https://cdn.skypack.dev/@aws-sdk/client-transcribe-streaming";
-    import { fromCognitoIdentityPool } from "https://cdn.skypack.dev/@aws-sdk/credential-providers";
+    <!-- 3. Lógica da Aplicação -->
+    <script>
+        const { TranscribeStreamingClient, StartStreamTranscriptionCommand } = window["@aws-sdk/client-transcribe-streaming"];
+        const { fromCognitoIdentityPool } = window["@aws-sdk/credential-providers"];
 
-    // --- CONFIGURAÇÕES ---
-    const WS_URL = "wss://egvdqa1n2e.execute-api.us-east-1.amazonaws.com/production/";
-    const REGION = "us-east-1";
-    const IDENTITY_POOL_ID = "us-east-1:3827df92-0a3e-431c-8710-636047b5d286";
+        // Configurações
+        const WS_URL = "wss://egvdqa1n2e.execute-api.us-east-1.amazonaws.com/production/";
+        const REGION = "us-east-1";
+        const IDENTITY_POOL_ID = "us-east-1:3827df92-0a3e-431c-8710-636047b5d286";
 
-    let socket;
-    let transcribeClient;
-    let isRecording = false;
-    let audioContext;
-    let processor;
-    let globalStream;
+        let socket;
+        let isRecording = false;
+        let audioContext;
+        let processor;
+        let globalStream;
 
-    const btnMic = document.getElementById('btnAction');
-    const status = document.getElementById('status');
-    const transcriptDiv = document.getElementById('transcript');
+        const btnMic = document.getElementById('btnAction');
+        const status = document.getElementById('status');
+        const transcriptDiv = document.getElementById('transcript');
 
-    // Função para converter Float32 para Int16 (PCM)
-    const pcmEncode = (input) => {
-        let offset = 0;
-        let buffer = new ArrayBuffer(input.length * 2);
-        let view = new DataView(buffer);
-        for (let i = 0; i < input.length; i++, offset += 2) {
-            let s = Math.max(-1, Math.min(1, input[i]));
-            view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-        }
-        return new Uint8Array(buffer);
-    };
+        // Função para codificar áudio em PCM (necessário para o Transcribe)
+        const pcmEncode = (input) => {
+            let buffer = new ArrayBuffer(input.length * 2);
+            let view = new DataView(buffer);
+            for (let i = 0; i < input.length; i++) {
+                let s = Math.max(-1, Math.min(1, input[i]));
+                view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+            }
+            return new Uint8Array(buffer);
+        };
 
-    const stopAll = () => {
-        isRecording = false;
-        if (globalStream) globalStream.getTracks().forEach(track => track.stop());
-        if (audioContext) audioContext.close();
-        if (socket) socket.close();
-        btnMic.classList.remove('active');
-        status.innerText = "Atendimento finalizado.";
-    };
-
-    btnMic.onclick = async () => {
-        if (isRecording) {
-            stopAll();
-            return;
-        }
-
-        try {
-            status.innerText = "Conectando...";
-            isRecording = true;
-
-            // 1. WebSocket para ouvir a Cris
-            socket = new WebSocket(WS_URL);
-            
-            socket.onopen = async () => {
-                btnMic.classList.add('active');
-                status.innerText = "Ouvindo... Pode falar.";
-                
-                // 2. Setup do Áudio
-                globalStream = await navigator.mediaDevices.getUserMedia({
-                    audio: { sampleRate: 44100, channelCount: 1 }
-                });
-
-                audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-                const source = audioContext.createMediaStreamSource(globalStream);
-                processor = audioContext.createScriptProcessor(4096, 1, 1);
-
-                // 3. AWS Transcribe Client
-                transcribeClient = new TranscribeStreamingClient({
-                    region: REGION,
-                    credentials: fromCognitoIdentityPool({
-                        identityPoolId: IDENTITY_POOL_ID,
-                        clientConfig: { region: REGION }
-                    })
-                });
-
-                const command = new StartStreamTranscriptionCommand({
-                    LanguageCode: "pt-BR",
-                    MediaSampleRateHertz: 16000,
-                    MediaEncoding: "pcm",
-                    AudioStream: (async function* () {
-                        for await (const chunk of audioGenerator()) {
-                            yield { AudioEvent: { AudioChunk: chunk } };
-                        }
-                    })()
-                });
-
-                // Inicia o fluxo de transcrição
-                const response = await transcribeClient.send(command);
-
-                for await (const event of response.TranscriptResultStream) {
-                    const results = event.TranscriptEvent.Transcript.Results;
-                    if (results.length > 0 && !results[0].IsPartial) {
-                        const text = results[0].Alternatives[0].Transcript;
-                        
-                        // Exibe no log e envia texto para Lambda
-                        transcriptDiv.style.display = "block";
-                        transcriptDiv.innerText = "Você: " + text;
-                        
-                        socket.send(JSON.stringify({
-                            action: "sendText",
-                            text: text
-                        }));
-                    }
-                }
-            };
-
-            socket.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                if (data.cris_respondeu) {
-                    transcriptDiv.innerText += "\n\nCris: " + data.cris_respondeu;
-                }
-                if (data.audio_64) {
-                    const audio = new Audio("data:audio/mp3;base64," + data.audio_64);
-                    audio.play();
-                }
-            };
-
-            socket.onerror = () => { status.innerText = "Erro na conexão."; stopAll(); };
-
-        } catch (err) {
-            console.error(err);
-            status.innerText = "Erro ao acessar microfone.";
+        const stopAll = () => {
             isRecording = false;
-        }
+            if (globalStream) globalStream.getTracks().forEach(track => track.stop());
+            if (audioContext && audioContext.state !== 'closed') audioContext.close();
+            if (socket) socket.close();
+            btnMic.classList.remove('active');
+            status.innerText = "Clique para iniciar o atendimento";
+        };
 
-        // Gerador de chunks de áudio
-        async function* audioGenerator() {
-            while (isRecording) {
-                yield await new Promise(resolve => {
-                    processor.onaudioprocess = (e) => {
-                        const pcm = pcmEncode(e.inputBuffer.getChannelData(0));
-                        resolve(pcm);
-                    };
+        btnMic.onclick = async () => {
+            if (isRecording) {
+                stopAll();
+                return;
+            }
+
+            try {
+                isRecording = true;
+                btnMic.classList.add('active');
+                status.innerText = "Conectando...";
+                transcriptDiv.innerText = "";
+                transcriptDiv.style.display = "none";
+
+                // Inicia WebSocket
+                socket = new WebSocket(WS_URL);
+                
+                socket.onopen = async () => {
+                    status.innerText = "Pode falar, estou ouvindo...";
+                    
+                    // Captura Microfone
+                    globalStream = await navigator.mediaDevices.getUserMedia({
+                        audio: { sampleRate: 44100, channelCount: 1 }
+                    });
+
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                    const source = audioContext.createMediaStreamSource(globalStream);
+                    processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+                    const transcribeClient = new TranscribeStreamingClient({
+                        region: REGION,
+                        credentials: fromCognitoIdentityPool({
+                            identityPoolId: IDENTITY_POOL_ID,
+                            clientConfig: { region: REGION }
+                        })
+                    });
+
+                    const command = new StartStreamTranscriptionCommand({
+                        LanguageCode: "pt-BR",
+                        MediaSampleRateHertz: 16000,
+                        MediaEncoding: "pcm",
+                        AudioStream: (async function* () {
+                            while (isRecording) {
+                                yield await new Promise(resolve => {
+                                    processor.onaudioprocess = (e) => {
+                                        resolve({ AudioEvent: { AudioChunk: pcmEncode(e.inputBuffer.getChannelData(0)) } });
+                                    };
+                                });
+                            }
+                        })()
+                    });
+
                     source.connect(processor);
                     processor.connect(audioContext.destination);
-                });
+
+                    const response = await transcribeClient.send(command);
+
+                    for await (const event of response.TranscriptResultStream) {
+                        const results = event.TranscriptEvent.Transcript.Results;
+                        if (results.length > 0 && !results[0].IsPartial) {
+                            const text = results[0].Alternatives[0].Transcript;
+                            transcriptDiv.style.display = "block";
+                            transcriptDiv.innerHTML = `<strong>Você:</strong> ${text}`;
+                            
+                            // Envia o texto para a sua Lambda via WebSocket
+                            socket.send(json.stringify({ action: "sendText", text: text }));
+                        }
+                    }
+                };
+
+                socket.onmessage = (e) => {
+                    const data = JSON.parse(e.data);
+                    if (data.cris_respondeu) {
+                        transcriptDiv.innerHTML += `<br><br><strong>Cris:</strong> ${data.cris_respondeu}`;
+                        transcriptDiv.scrollTop = transcriptDiv.scrollHeight;
+                    }
+                    if (data.audio_64) {
+                        const audio = new Audio("data:audio/mp3;base64," + data.audio_64);
+                        audio.play();
+                    }
+                };
+
+                socket.onerror = (err) => console.error("Erro WebSocket:", err);
+                socket.onclose = () => console.log("Conexão encerrada");
+
+            } catch (err) {
+                console.error("Erro Geral:", err);
+                status.innerText = "Erro ao acessar microfone ou AWS.";
+                stopAll();
             }
-        }
-    };
-</script>
+        };
+    </script>
 </body>
 </html>
