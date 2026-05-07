@@ -193,7 +193,6 @@ btnMic.onclick = () => {
                 socket.send(JSON.stringify({
                     action: "sendText",
                     text: text,
-                    sessionId: sessionId
                 }));
             }
 
