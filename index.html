@@ -4,153 +4,264 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CEABS - Cris Voz</title>
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
     <style>
         :root { --primary: #003366; --accent: #ff9900; --bg-light: #f4f7f9; }
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg-light); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .container { background: white; padding: 3rem; border-radius: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: center; max-width: 450px; width: 90%; }
-        .logo { font-weight: 800; font-size: 1.8rem; color: var(--primary); margin-bottom: 2rem; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-light);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background: white;
+            padding: 3rem;
+            border-radius: 24px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            text-align: center;
+            max-width: 450px;
+            width: 90%;
+        }
+
+        .logo {
+            font-weight: 800;
+            font-size: 1.8rem;
+            color: var(--primary);
+            margin-bottom: 2rem;
+        }
+
         .logo span { color: var(--accent); }
-        .mic-button { width: 100px; height: 100px; border-radius: 50%; background: var(--primary); border: none; cursor: pointer; transition: all 0.3s ease; display: flex; justify-content: center; align-items: center; margin: 0 auto 1.5rem; outline: none; }
-        .mic-button svg { fill: white; width: 40px; height: 40px; }
-        .mic-button.active { background: #e74c3c; transform: scale(1.1); box-shadow: 0 0 20px rgba(231, 76, 60, 0.4); animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
-        #status { color: #666; font-size: 0.95rem; margin-bottom: 1rem; min-height: 1.2rem; }
-        #transcript { margin-top: 1.5rem; padding: 1rem; background: #f9f9f9; border-radius: 12px; font-size: 0.9rem; text-align: left; color: #333; max-height: 150px; overflow-y: auto; display: none; border-left: 4px solid var(--accent); white-space: pre-wrap; }
+
+        .mic-button {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 1.5rem;
+            outline: none;
+        }
+
+        .mic-button svg {
+            fill: white;
+            width: 40px;
+            height: 40px;
+        }
+
+        .mic-button.active {
+            background: #e74c3c;
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(231, 76, 60, 0.4);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        #status {
+            color: #666;
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+            min-height: 1.2rem;
+        }
+
+        #transcript {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #f9f9f9;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            text-align: left;
+            color: #333;
+            max-height: 150px;
+            overflow-y: auto;
+            display: none;
+            border-left: 4px solid var(--accent);
+            white-space: pre-wrap;
+        }
     </style>
 </head>
+
 <body>
 
-    <div class="container">
-        <div class="logo">CEABS <span>CRIS VOZ</span></div>
-        <button id="btnAction" class="mic-button">
-            <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
-        </button>
-        <div id="status">Clique para iniciar o atendimento</div>
-        <div id="transcript"></div>
-    </div>
+<div class="container">
+    <div class="logo">CEABS <span>CRIS VOZ</span></div>
 
-    <script>
-        // Configurações exatas da sua infraestrutura na Virginia
-        const WS_URL = "wss://egvdqa1n2e.execute-api.us-east-1.amazonaws.com/production";
-        
-        let socket, isRecording = false, recognition;
-        const btnMic = document.getElementById('btnAction');
-        const status = document.getElementById('status');
-        const transcriptDiv = document.getElementById('transcript');
+    <button id="btnAction" class="mic-button">
+        <svg viewBox="0 0 24 24">
+            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+        </svg>
+    </button>
 
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    <div id="status">Clique para iniciar o atendimento</div>
+    <div id="transcript"></div>
+</div>
 
-        const stopAll = () => {
-            isRecording = false;
-            if (recognition) {
-                recognition.onend = null; // Previne reinício automático
-                recognition.stop();
-            }
-            if (socket) socket.close();
-            btnMic.classList.remove('active');
-            status.innerText = "Atendimento encerrado";
-            setTimeout(() => { status.innerText = "Clique para iniciar o atendimento"; }, 2000);
+<script>
+const WS_URL = "wss://egvdqa1n2e.execute-api.us-east-1.amazonaws.com/production";
+
+let socket;
+let recognition;
+let isRecording = false;
+
+const btnMic = document.getElementById("btnAction");
+const status = document.getElementById("status");
+const transcriptDiv = document.getElementById("transcript");
+
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+// sessão fixa do usuário (evita perda de contexto)
+const sessionId = crypto.randomUUID();
+
+// -------------------- STOP --------------------
+function stopAll() {
+    isRecording = false;
+
+    if (recognition) {
+        recognition.onend = null;
+        recognition.stop();
+    }
+
+    if (socket) socket.close();
+
+    btnMic.classList.remove("active");
+    status.innerText = "Atendimento encerrado";
+
+    setTimeout(() => {
+        status.innerText = "Clique para iniciar o atendimento";
+    }, 1500);
+}
+
+// -------------------- START --------------------
+btnMic.onclick = () => {
+
+    if (isRecording) {
+        stopAll();
+        return;
+    }
+
+    if (!SpeechRecognition) {
+        alert("Seu navegador não suporta reconhecimento de voz.");
+        return;
+    }
+
+    isRecording = true;
+    btnMic.classList.add("active");
+
+    status.innerText = "Conectando...";
+    transcriptDiv.style.display = "none";
+    transcriptDiv.innerText = "";
+
+    socket = new WebSocket(WS_URL);
+
+    // -------------------- WS OPEN --------------------
+    socket.onopen = () => {
+        status.innerText = "Conectado! Pode falar...";
+
+        recognition = new SpeechRecognition();
+        recognition.lang = "pt-BR";
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        recognition.onstart = () => {
+            status.innerText = "Cris está ouvindo...";
         };
 
-        btnMic.onclick = () => {
-            if (isRecording) { stopAll(); return; }
-            
-            if (!SpeechRecognition) {
-                alert("Navegador incompatível com reconhecimento de voz.");
-                return;
+        recognition.onresult = (event) => {
+            const text = event.results[0][0].transcript;
+
+            transcriptDiv.style.display = "block";
+            transcriptDiv.innerHTML = `<strong>Você:</strong> ${text}`;
+
+            if (socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    action: "sendText",
+                    text: text,
+                    sessionId: sessionId
+                }));
             }
 
-            isRecording = true;
-            btnMic.classList.add('active');
-            status.innerText = "Conectando ao servidor...";
-            transcriptDiv.style.display = "none";
-            transcriptDiv.innerText = "";
+            status.innerText = "Cris está processando...";
+        };
 
-            // 1. Inicia o túnel WebSocket primeiro
-            socket = new WebSocket(WS_URL);
+        recognition.onerror = (err) => {
+            console.error("Speech error:", err);
 
-            // 2. Só libera o microfone quando o WebSocket estiver aberto (Handshake OK)
-            socket.onopen = () => {
-                console.log("WebSocket conectado com sucesso!");
-                status.innerText = "Conectado! Pode falar...";
-                
-                recognition = new SpeechRecognition();
-                recognition.lang = 'pt-BR';
-                recognition.interimResults = false;
-                recognition.continuous = false; // Processa frase por frase para evitar latência
-
-                recognition.onstart = () => {
-                    status.innerText = "Cris está ouvindo...";
-                };
-
-                recognition.onresult = (event) => {
-                    const text = event.results[0][0].transcript;
-                    transcriptDiv.style.display = "block";
-                    transcriptDiv.innerHTML = `<strong>Você:</strong> ${text}`;
-                    
-                    // Envio seguindo a estrutura da sua rota 'sendText'
-                    if (socket.readyState === WebSocket.OPEN) {
-                        const payload = JSON.stringify({ 
-                            action: "sendText", 
-                            text: text 
-                        });
-                        socket.send(payload);
-                        status.innerText = "Cris está processando...";
-                    }
-                };
-
-                recognition.onerror = (err) => {
-                    console.error("Erro Speech:", err.error);
-                    if (err.error === 'no-speech') {
-                        status.innerText = "Não te ouvi, tente novamente.";
-                    } else {
-                        stopAll();
-                    }
-                };
-
-                recognition.onend = () => {
-                    // Reinicia o reconhecimento enquanto o socket estiver aberto
-                    if (isRecording && socket.readyState === WebSocket.OPEN) {
-                        recognition.start();
-                    }
-                };
-
-                recognition.start();
-            };
-
-            socket.onmessage = (e) => {
-                try {
-                    const data = JSON.parse(e.data);
-                    
-                    // Exibe a resposta de texto da Cris
-                    if (data.cris_respondeu) {
-                        transcriptDiv.innerHTML += `\n\n<strong>Cris:</strong> ${data.cris_respondeu}`;
-                        transcriptDiv.scrollTop = transcriptDiv.scrollHeight;
-                        status.innerText = "Ouvindo novamente...";
-                    }
-                    
-                    // Reproduz o áudio do Polly
-                    if (data.audio_64) {
-                        const audio = new Audio("data:audio/mp3;base64," + data.audio_64);
-                        audio.play().catch(err => console.error("Erro ao tocar áudio:", err));
-                    }
-                } catch (err) {
-                    console.error("Erro ao processar mensagem do servidor:", err);
-                }
-            };
-
-            socket.onerror = (err) => {
-                console.error("Erro crítico no WebSocket:", err);
-                status.innerText = "Erro na conexão com o servidor.";
+            if (err.error === "no-speech") {
+                status.innerText = "Não ouvi nada, tente novamente.";
+            } else {
                 stopAll();
-            };
-
-            socket.onclose = () => {
-                console.log("Conexão WebSocket fechada.");
-                if (isRecording) stopAll();
-            };
+            }
         };
-    </script>
+
+        recognition.onend = () => {
+            if (isRecording && socket.readyState === WebSocket.OPEN) {
+                setTimeout(() => {
+                    try {
+                        recognition.start();
+                    } catch (e) {
+                        console.warn("Restart blocked:", e);
+                    }
+                }, 200);
+            }
+        };
+
+        recognition.start();
+    };
+
+    // -------------------- MESSAGE --------------------
+    socket.onmessage = (e) => {
+        try {
+            const data = JSON.parse(e.data);
+
+            if (data.cris_respondeu) {
+                transcriptDiv.innerHTML += `\n\n<strong>Cris:</strong> ${data.cris_respondeu}`;
+                transcriptDiv.scrollTop = transcriptDiv.scrollHeight;
+                status.innerText = "Pode falar...";
+            }
+
+            if (data.audio_64) {
+                const audio = new Audio();
+                audio.src = "data:audio/mp3;base64," + data.audio_64;
+                audio.play().catch(err => {
+                    console.warn("Autoplay bloqueado:", err);
+                });
+            }
+
+        } catch (err) {
+            console.error("Erro mensagem WS:", err);
+        }
+    };
+
+    // -------------------- ERROR --------------------
+    socket.onerror = (err) => {
+        console.error("WebSocket error:", err);
+        status.innerText = "Erro na conexão";
+        stopAll();
+    };
+
+    socket.onclose = () => {
+        console.log("WebSocket fechado");
+        if (isRecording) stopAll();
+    };
+};
+</script>
+
 </body>
 </html>
